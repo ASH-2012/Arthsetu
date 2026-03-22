@@ -19,9 +19,7 @@ env/
 # Data & Models (Pulled from S3 at runtime)
 *.csv
 *.parquet
-*.pkl
-*.joblib
-models/*.pkl
+
 
 # Secrets
 .env

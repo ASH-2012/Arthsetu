@@ -5,8 +5,7 @@
 
 * **Frontend:** Vaibhavi (React.js, Custom CSS)
 * **Backend Pipeline:** Nirali & Aaryahi (FastAPI, scikit-learn, SHAP)
-* **Architecture & DevOps:** [Your Name] & Garvit
-
+* **Architecture & DevOps:** 
 **DO NOT push untested code, ChatGPT hallucinations, or architectural changes to the `main` branch. All commits must be reviewed.**
 
 ---

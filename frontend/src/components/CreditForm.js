@@ -12,39 +12,26 @@ function CreditForm() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
+  // Updated mock response to strictly match the new Pydantic schema
   const mockResponse = {
+    status: "success",
     assessment: {
-      credit_score_equivalent: 742,
+      probability_of_default: 0.08,
       risk_category: "Low Risk",
-      probability_of_default: 0.08
+      credit_score_equivalent: 742,
+      max_approval_limit: 300000
     },
-    shap_explanations: [
-      {
-        feature: "Income_Annual",
-        impact: 0.34,
-        direction: "positive"
-      },
-      {
-        feature: "Savings_Balance",
-        impact: 0.26,
-        direction: "positive"
-      },
-      {
-        feature: "Spending_Ratio",
-        impact: 0.18,
-        direction: "negative"
-      },
-      {
-        feature: "Utility_Bill_Late_Count",
-        impact: 0.12,
-        direction: "negative"
-      },
-      {
-        feature: "Credit_History_Length_Months",
-        impact: 0.10,
-        direction: "positive"
-      }
-    ]
+    shap_explanations: {
+      positive_factors: [
+        { feature: "Income_Annual", impact: 0.34, message: "Income lowered risk." },
+        { feature: "Savings_Balance", impact: 0.26, message: "Savings lowered risk." },
+        { feature: "Credit_History_Length_Months", impact: 0.10, message: "History lowered risk." }
+      ],
+      negative_factors: [
+        { feature: "Spending_Ratio", impact: 0.18, message: "Spending increased risk." },
+        { feature: "Utility_Bill_Late_Count", impact: 0.12, message: "Late bills increased risk." }
+      ]
+    }
   };
 
   const handleChange = (e) => {
@@ -65,8 +52,14 @@ function CreditForm() {
       Credit_History_Length_Months: Number(formData.Credit_History_Length_Months)
     };
 
+    // Wrapping payload to satisfy Pydantic CreditEvaluationRequest schema
+    const payload = {
+      applicant_id: `DEMO-APP-${Math.floor(Math.random() * 10000)}`,
+      financial_data: requestData
+    };
+
     console.log("Submitted JSON:");
-    console.log(JSON.stringify(requestData, null, 2));
+    console.log(JSON.stringify(payload, null, 2));
 
     setLoading(true);
     setResult(null);
@@ -77,7 +70,7 @@ function CreditForm() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify(payload) // Sending the wrapped payload
       });
 
       const data = await response.json();
@@ -106,11 +99,17 @@ function CreditForm() {
   };
 
   const assessment = result?.assessment;
-  const shapData = result?.shap_explanations || [];
+  
+  // Safely extract and combine SHAP data for rendering
+  const shapExplanations = result?.shap_explanations || { positive_factors: [], negative_factors: [] };
+  const combinedShap = [
+    ...(shapExplanations.positive_factors || []).map(f => ({ ...f, direction: 'positive' })),
+    ...(shapExplanations.negative_factors || []).map(f => ({ ...f, direction: 'negative' }))
+  ].sort((a, b) => b.impact - a.impact);
 
   const getRiskStyle = (risk) => {
     if (risk === "Low Risk") return styles.scoreLabelLow;
-    if (risk === "Moderate Risk") return styles.scoreLabelModerate;
+    if (risk === "Medium Risk" || risk === "Moderate Risk") return styles.scoreLabelModerate;
     return styles.scoreLabelHigh;
   };
 
@@ -293,7 +292,7 @@ function CreditForm() {
                     Green bars increased the score. Red bars reduced the score.
                   </p>
 
-                  {shapData.map((item, index) => (
+                  {combinedShap.map((item, index) => (
                     <div key={index} style={styles.shapRow}>
                       <div style={styles.shapHeaderRow}>
                         <span style={styles.featureName}>{item.feature}</span>
